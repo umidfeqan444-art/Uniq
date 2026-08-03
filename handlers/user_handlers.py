@@ -269,7 +269,7 @@ async def create_crypto_pay_invoice(amount: float, currency: str = "USD") -> Opt
     except Exception as e:
         return None
 
-async def create_plisio_invoice(amount: float, order_number: str) -> Optional[dict]:
+async def create_plisio_invoice(amount: float, order_number: str, user_id: int = None) -> Optional[dict]:
     """Create a Plisio invoice (All Crypto method), invoiced in BTC, and return payment details"""
     if not PLISIO_API_KEY or PLISIO_API_KEY.strip() == "":
         print("DEBUG: Plisio API key is not configured")
@@ -284,6 +284,8 @@ async def create_plisio_invoice(amount: float, order_number: str) -> Optional[di
             "source_amount": str(amount),
             "order_number": order_number,
             "order_name": "Balance top-up",
+            # Auto-filled so the buyer is never asked to type an email on the Plisio page
+            "email": f"user{user_id}@telegram.local" if user_id else "noreply@telegram.local",
         }
 
         response = requests.get(url, params=params, timeout=20)
@@ -824,7 +826,7 @@ async def process_top_up_amount(message: Message, state: FSMContext):
         if payment_method == "plisio":
             method_label = "All Crypto (BTC)"
             order_number = f"{message.from_user.id}-{int(amount * 100)}-{message.message_id}"
-            invoice = await create_plisio_invoice(amount, order_number)
+            invoice = await create_plisio_invoice(amount, order_number, user_id=message.from_user.id)
         else:
             method_label = "CryptoBot"
             invoice = await create_crypto_pay_invoice(amount)
