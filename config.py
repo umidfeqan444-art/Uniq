@@ -16,5 +16,8 @@ CRYPTO_PAY_API_KEY = "515393:AALPG9tRn0DhZrunxHbfF71d7bJGTcvy6wg"
 # крипто-ассет (например, 'USDT' или 'BTC') для автоматического падбека.
 CRYPTO_FALLBACK_ASSET = "USDT"
 
+# Plisio API ключ (метод пополнения "All Crypto", инвойсы выставляются в BTC)
+PLISIO_API_KEY = "aEmWIwx-NY-w5ORoJbDPavjHN3NY008W-hsObIvvHEaxxVyHsMcfOIVIcY9z7i9J"
+
 # Минимальная сумма пополнения в USD
-MIN_TOPUP_AMOUNT = 30
+MIN_TOPUP_AMOUNT = 60
