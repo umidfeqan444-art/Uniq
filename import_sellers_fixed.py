@@ -122,20 +122,8 @@ def get_bins_for_country_display(country_name: str):
             break
     if not target:
         return []
-    items = []
-    # reuse module-level parser
-    def _local_parse(raw_line):
-        return _parse_line(raw_line, supplier_name=_normalize_supplier_name_from_path(target))
-    try:
-        with open(target, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                parsed = _local_parse(line)
-                items.append(parsed)
-    except Exception as e:
-        print(f"Error reading {target}: {e}")
+    supplier = _normalize_supplier_name_from_path(target)
+    items = list(_get_cached_bins_for_file(target, supplier))
     return redistribute_suppliers_evenly(items)
 
 def get_all_countries():
@@ -144,18 +132,10 @@ def get_all_countries():
     files = _find_seller_files()
     for p in files:
         supplier = _normalize_supplier_name_from_path(p)
-        try:
-            with open(p, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    parsed = _parse_line(line, supplier_name=supplier)
-                    country = parsed.get('country', '').strip()
-                    if country:
-                        countries.add(country)
-        except Exception:
-            continue
+        for parsed in _get_cached_bins_for_file(p, supplier):
+            country = parsed.get('country', '').strip()
+            if country:
+                countries.add(country)
     return sorted(countries)
 
 def get_bins_for_country_all(country_name: str):
@@ -165,21 +145,12 @@ def get_bins_for_country_all(country_name: str):
     files = _find_seller_files()
     for p in files:
         supplier = _normalize_supplier_name_from_path(p)
-        try:
-            with open(p, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    parsed = _parse_line(line, supplier_name=supplier)
-                    country = parsed.get('country', '').strip()
-                    if not country:
-                        continue
-                    # match by exact or substring
-                    if country.lower() == lookup or lookup in country.lower() or country.lower() in lookup:
-                        results.append(parsed)
-        except Exception:
-            continue
+        for parsed in _get_cached_bins_for_file(p, supplier):
+            country = parsed.get('country', '').strip()
+            if not country:
+                continue
+            if country.lower() == lookup or lookup in country.lower() or country.lower() in lookup:
+                results.append(parsed)
     return redistribute_suppliers_evenly(results)
 
 def get_bins_for_supplier(supplier_name: str):
@@ -194,20 +165,8 @@ def get_bins_for_supplier(supplier_name: str):
     if lookup in alias_map:
         candidate = SELLER_FILES_DIR / alias_map[lookup]
         if candidate.exists():
-            items = []
             canonical = lookup.upper()
-            def _local_parse(raw_line):
-                return _parse_line(raw_line, supplier_name=canonical)
-            try:
-                with open(candidate, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        parsed = _local_parse(line)
-                        items.append(parsed)
-            except Exception as e:
-                print(f"Error reading {candidate}: {e}")
+            items = list(_get_cached_bins_for_file(candidate, canonical))
             return redistribute_suppliers_evenly(items)
 
     # Fallback: try to find a file whose normalized stem matches or contains the supplier_name
@@ -221,22 +180,9 @@ def get_bins_for_supplier(supplier_name: str):
     if not target:
         return []
 
-    items = []
-    def _local_parse(raw_line):
-        # Normalize target stem to canonical supplier name when possible
-        stem = _normalize_supplier_name_from_path(target)
-        canonical = _canonical_supplier_name_from_stem(stem)
-        return _parse_line(raw_line, supplier_name=canonical)
-    try:
-        with open(target, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                parsed = _local_parse(line)
-                items.append(parsed)
-    except Exception as e:
-        print(f"Error reading {target}: {e}")
+    stem = _normalize_supplier_name_from_path(target)
+    canonical = _canonical_supplier_name_from_stem(stem)
+    items = list(_get_cached_bins_for_file(target, canonical))
     return redistribute_suppliers_evenly(items)
 
 def get_flag_for_country(country_name: str) -> str:
@@ -256,27 +202,21 @@ def get_flag_for_country(country_name: str) -> str:
     if not lookup:
         return "🌍"
 
-    # 1) Try to read from SELLER files
+    # 1) Try to read from SELLER files (uses cache)
     try:
         files = _find_seller_files()
         for p in files:
             supplier = _normalize_supplier_name_from_path(p)
-            with open(p, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    parsed = _parse_line(line, supplier_name=supplier)
-                    country = parsed.get("country", "").strip()
-                    if not country:
-                        continue
-                    c_low = country.lower()
-                    if c_low == lookup or lookup in c_low or c_low in lookup:
-                        flag = parsed.get("flag")
-                        if flag:
-                            return flag
+            for parsed in _get_cached_bins_for_file(p, supplier):
+                country = parsed.get("country", "").strip()
+                if not country:
+                    continue
+                c_low = country.lower()
+                if c_low == lookup or lookup in c_low or c_low in lookup:
+                    flag = parsed.get("flag")
+                    if flag:
+                        return flag
     except Exception as e:
-        # Do not break the bot if something is wrong with files
         print(f"get_flag_for_country: error while scanning files: {e}")
 
     # 2) Fallback static map (lower‑case keys)
@@ -350,6 +290,49 @@ def get_flag_for_country(country_name: str) -> str:
 _SUPPLIERS_CACHE = ["ADMIN", "ZEUS", "tec_9", "topseller", "jessePinkman", "Operator", "macho"]
 _SUPPLIERS_COUNT = len(_SUPPLIERS_CACHE)
 
+# ─── Кэш файлов в памяти ───────────────────────────────────────────────────
+# { canonical_key -> [parsed_bin, ...] }
+_FILE_CACHE: dict = {}
+_FILE_MTIME: dict = {}  # { path_str -> mtime } для инвалидации при изменении файла
+
+def _get_cached_bins_for_file(path, supplier_name: str) -> list:
+    """Читает файл один раз и кэширует результат. Перечитывает если файл изменился."""
+    import os
+    path_str = str(path)
+    try:
+        mtime = os.path.getmtime(path_str)
+    except OSError:
+        return []
+
+    if path_str in _FILE_CACHE and _FILE_MTIME.get(path_str) == mtime:
+        return _FILE_CACHE[path_str]
+
+    items = []
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                parsed = _parse_line(line, supplier_name=supplier_name)
+                items.append(parsed)
+    except Exception as e:
+        print(f"_get_cached_bins_for_file: error reading {path}: {e}")
+
+    _FILE_CACHE[path_str] = items
+    _FILE_MTIME[path_str] = mtime
+    return items
+
+def invalidate_cache(path=None):
+    """Сбрасывает кэш (весь или для конкретного файла) — вызывать после decrease_pcs_in_file."""
+    if path is None:
+        _FILE_CACHE.clear()
+        _FILE_MTIME.clear()
+    else:
+        path_str = str(path)
+        _FILE_CACHE.pop(path_str, None)
+        _FILE_MTIME.pop(path_str, None)
+
 def decrease_pcs_in_file(bin_code: str):
     """Уменьшает pcs на 1 для указанного BIN во всех SELLER файлах. Если pcs становится 0, строка удаляется."""
     files = _find_seller_files()
@@ -389,6 +372,7 @@ def decrease_pcs_in_file(bin_code: str):
             if changed:
                 with open(p, 'w', encoding='utf-8') as f:
                     f.writelines(new_lines)
+                invalidate_cache(p)  # сбрасываем кэш для этого файла
         except Exception as e:
             print(f"decrease_pcs_in_file: error processing {p}: {e}")
 
