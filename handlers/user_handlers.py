@@ -2783,7 +2783,7 @@ async def end_support_chat_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "vin_search")
 async def top_up_handler(callback: CallbackQuery, state: FSMContext):
-    text = "<b>Select a top-up method</b> (minimum: $%.2f):" % MIN_TOPUP_AMOUNT
+    text = "<b>Select a top-up method</b>"
 
     all_crypto_button = InlineKeyboardButton(text="All Crypto", callback_data="topup_method_plisio")
     cryptobot_button = InlineKeyboardButton(text="CryptoBot", callback_data="topup_method_cryptobot")
@@ -2799,9 +2799,7 @@ async def top_up_handler(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "topup_method_plisio")
 async def top_up_method_plisio_handler(callback: CallbackQuery, state: FSMContext):
     await state.update_data(payment_method="plisio")
-    text = f"""All Crypto (BTC)
-
-<b>Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})</b>"""
+    text = f"""<b>Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})</b>"""
     back_button = InlineKeyboardButton(text="◀️ Back", callback_data="vin_search")
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
     await edit_by_callback(callback, text=text, photo_path="котлета.jpg", reply_markup=keyboard, parse_mode="HTML")
@@ -2810,9 +2808,7 @@ async def top_up_method_plisio_handler(callback: CallbackQuery, state: FSMContex
 @router.callback_query(F.data == "topup_method_cryptobot")
 async def top_up_method_cryptobot_handler(callback: CallbackQuery, state: FSMContext):
     await state.update_data(payment_method="cryptobot")
-    text = f"""CryptoBot
-
-<b>Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})</b>"""
+    text = f"""<b>Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})</b>"""
     back_button = InlineKeyboardButton(text="◀️ Back", callback_data="vin_search")
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
     await edit_by_callback(callback, text=text, photo_path="котлета.jpg", reply_markup=keyboard, parse_mode="HTML")
