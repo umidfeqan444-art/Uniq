@@ -2347,7 +2347,7 @@ async def process_bin_search(message: Message, state: FSMContext):
 
     for supplier in suppliers:
         bins = get_bins_for_supplier(supplier)
-        matching_bins.extend([bin_item for bin_item in bins if bin_item['bin'].startswith(bin_input)])
+        matching_bins.extend([bin_item for bin_item in bins if bin_item.get('bin') and bin_item['bin'].startswith(bin_input)])
 
     # Перераспределяем поставщиков равномерно
     from import_sellers_fixed import redistribute_suppliers_evenly
@@ -2476,7 +2476,7 @@ async def search_bin_page_handler(callback: CallbackQuery):
 
     for supplier in suppliers:
         bins = get_bins_for_supplier(supplier)
-        matching_bins.extend([bin_item for bin_item in bins if bin_item['bin'].startswith(bin_input)])
+        matching_bins.extend([bin_item for bin_item in bins if bin_item.get('bin') and bin_item['bin'].startswith(bin_input)])
 
     # Перераспределяем поставщиков равномерно
     from import_sellers_fixed import redistribute_suppliers_evenly
