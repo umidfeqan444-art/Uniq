@@ -771,8 +771,8 @@ After payment, click on the "🔄 Check payment" button."""
             pay_now_button = InlineKeyboardButton(text="💳 Pay now", url=pay_url)
             back_button = InlineKeyboardButton(text="◀️ Back", callback_data="vin_search")
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [check_payment_button],
                 [pay_now_button],
+                [check_payment_button],
                 [back_button]
             ])
             await edit_by_callback(callback, text=text, photo_path="котлета.jpg", reply_markup=keyboard, parse_mode="HTML")
@@ -858,8 +858,8 @@ async def process_top_up_amount(message: Message, state: FSMContext):
         pay_now_button = InlineKeyboardButton(text="💳 Pay now", url=pay_url)
         back_button = InlineKeyboardButton(text="◀️ Back", callback_data="main_menu")
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [check_payment_button],
             [pay_now_button],
+            [check_payment_button],
             [back_button]
         ])
 
@@ -2783,7 +2783,7 @@ async def end_support_chat_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "vin_search")
 async def top_up_handler(callback: CallbackQuery, state: FSMContext):
-    text = "Select a top-up method (minimum: $%.2f):" % MIN_TOPUP_AMOUNT
+    text = "<b>Select a top-up method</b> (minimum: $%.2f):" % MIN_TOPUP_AMOUNT
 
     all_crypto_button = InlineKeyboardButton(text="All Crypto", callback_data="topup_method_plisio")
     cryptobot_button = InlineKeyboardButton(text="CryptoBot", callback_data="topup_method_cryptobot")
@@ -2801,7 +2801,7 @@ async def top_up_method_plisio_handler(callback: CallbackQuery, state: FSMContex
     await state.update_data(payment_method="plisio")
     text = f"""All Crypto (BTC)
 
-Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})"""
+<b>Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})</b>"""
     back_button = InlineKeyboardButton(text="◀️ Back", callback_data="vin_search")
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
     await edit_by_callback(callback, text=text, photo_path="котлета.jpg", reply_markup=keyboard, parse_mode="HTML")
@@ -2812,7 +2812,7 @@ async def top_up_method_cryptobot_handler(callback: CallbackQuery, state: FSMCon
     await state.update_data(payment_method="cryptobot")
     text = f"""CryptoBot
 
-Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})"""
+<b>Write top-up amount in USD (minimum: ${MIN_TOPUP_AMOUNT:.2f})</b>"""
     back_button = InlineKeyboardButton(text="◀️ Back", callback_data="vin_search")
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
     await edit_by_callback(callback, text=text, photo_path="котлета.jpg", reply_markup=keyboard, parse_mode="HTML")
